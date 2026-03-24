@@ -95,4 +95,15 @@ const statsForTenant = async (tenantId) => {
   return rows[0];
 };
 
-module.exports = { findAll, findById, create, update, updateLine, remove, statsForTenant };
+/** Sum of quantities in Created orders for a product (committed but not yet confirmed) */
+const committedQtyForProduct = async (productId) => {
+  const { rows } = await pool.query(
+    `SELECT COALESCE(SUM(quantity), 0) AS committed
+     FROM orders
+     WHERE product_id = $1 AND status = 'Created'`,
+    [productId]
+  );
+  return parseInt(rows[0].committed);
+};
+
+module.exports = { findAll, findById, create, update, updateLine, remove, statsForTenant, committedQtyForProduct };

@@ -17,8 +17,9 @@ const getOrder = async (id, tenantId) => {
 /**
  * Core business rule:
  *   1. Product must be Active (cannot order Inactive products).
- *   2. If inventory >= requested_quantity  → status = 'Created'
- *      If inventory <  requested_quantity  → status = 'Pending'
+ *   2. Effective available = inventory quantity − sum of existing Created orders
+ *   3. If effective available >= requested_quantity  → status = 'Created'
+ *      If effective available <  requested_quantity  → status = 'Pending'
  */
 const createOrder = async ({ tenantId, productId, quantity }) => {
   const product = await productRepo.findById(productId, tenantId);
@@ -27,8 +28,10 @@ const createOrder = async ({ tenantId, productId, quantity }) => {
     throw Object.assign(new Error('Cannot create an order for an Inactive product'), { status: 400 });
 
   const inventory = await inventoryRepo.findByProductId(productId);
-  const availableQty = inventory ? inventory.quantity : 0;
-  const status = availableQty >= quantity ? 'Created' : 'Pending';
+  const stockQty = inventory ? inventory.quantity : 0;
+  const committed = await orderRepo.committedQtyForProduct(productId);
+  const effectiveAvailable = stockQty - committed;
+  const status = effectiveAvailable >= quantity ? 'Created' : 'Pending';
 
   return orderRepo.create({ tenantId, productId, quantity, status });
 };
@@ -79,8 +82,12 @@ const reviseOrder = async (id, tenantId, { productId, quantity }) => {
     throw Object.assign(new Error('Cannot use an Inactive product on an order'), { status: 400 });
 
   const inventory = await inventoryRepo.findByProductId(productId);
-  const availableQty = inventory ? inventory.quantity : 0;
-  const nextStatus = availableQty >= quantity ? 'Created' : 'Pending';
+  const stockQty = inventory ? inventory.quantity : 0;
+  // Exclude this order's own committed qty from the calculation
+  const committed = await orderRepo.committedQtyForProduct(productId);
+  const ownCommitted = existing.status === 'Created' ? existing.quantity : 0;
+  const effectiveAvailable = stockQty - (committed - ownCommitted);
+  const nextStatus = effectiveAvailable >= quantity ? 'Created' : 'Pending';
 
   return orderRepo.updateLine(id, { productId, quantity, status: nextStatus });
 };
