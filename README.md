@@ -6,7 +6,7 @@ GitHub: [https://github.com/HARSHA123361/INVENTORY-MANAGEMENT-SYSTEM](https://gi
 
 ---
 
-## What We Built
+## What I Built
 
 A multi-tenant web application where each tenant (organization) has its own isolated view of:
 
