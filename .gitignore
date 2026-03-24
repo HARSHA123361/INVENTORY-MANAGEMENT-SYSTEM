@@ -3,5 +3,5 @@ client/node_modules/
 server/node_modules/
 client/dist/
 .env
-server/db/inventory.db
+server/.env
 .DS_Store

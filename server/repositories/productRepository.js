@@ -54,25 +54,20 @@ const findActiveByTenant = async (tenantId) => {
 const create = async ({ tenantId, name, sku, category, status = 'Active', reorderThreshold, costPerUnit }) => {
   const productId = randomUUID();
   const inventoryId = randomUUID();
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-    const { rows } = await client.query(
-      `INSERT INTO products (id, tenant_id, name, sku, category, status, reorder_threshold, cost_per_unit)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
-      [productId, tenantId, name, sku, category, status, reorderThreshold, costPerUnit]
-    );
-    const product = rows[0];
-    // Auto-create an inventory record
-    await client.query(`INSERT INTO inventory (id, product_id, quantity) VALUES ($1, $2, 0)`, [inventoryId, product.id]);
-    await client.query('COMMIT');
-    return product;
-  } catch (e) {
-    await client.query('ROLLBACK');
-    throw e;
-  } finally {
-    client.release();
-  }
+
+  const results = await pool.batch([
+    {
+      sql: `INSERT INTO products (id, tenant_id, name, sku, category, status, reorder_threshold, cost_per_unit)
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+      params: [productId, tenantId, name, sku, category, status, reorderThreshold, costPerUnit],
+    },
+    {
+      sql: `INSERT INTO inventory (id, product_id, quantity) VALUES ($1, $2, 0)`,
+      params: [inventoryId, productId],
+    },
+  ]);
+
+  return results[0].rows[0];
 };
 
 const update = async (id, { name, sku, category, status, reorderThreshold, costPerUnit }) => {

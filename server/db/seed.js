@@ -1,3 +1,4 @@
+require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 const pool = require('./pool');
 const fs = require('fs');
 const path = require('path');
@@ -5,10 +6,7 @@ const { randomUUID } = require('crypto');
 
 async function migrate() {
   const sql = fs.readFileSync(path.join(__dirname, 'migrations/001_init.sql'), 'utf8');
-  // SQLite .Database doesn't support multiple statements in one call easily in some wrappers,
-  // but my pool.js uses db.all/run which usually handles one at a time.
-  // We'll split by semicolon for safety.
-  const statements = sql.split(';').filter(s => s.trim());
+  const statements = sql.split(';').map(s => s.trim()).filter(Boolean);
   for (const s of statements) {
     await pool.query(s);
   }
@@ -17,7 +15,6 @@ async function migrate() {
 
 async function seed() {
   try {
-    // Insert tenants
     const tenantIds = [];
     const tenants = [['Acme Corp', 'Active'], ['Global Tech', 'Active'], ['Nexus Industries', 'Inactive']];
 
@@ -30,7 +27,6 @@ async function seed() {
       tenantIds.push(id);
     }
 
-    // Products per tenant
     const productsData = [
       [tenantIds[0], 'Industrial Adhesive', 'ADH-100', 'Chemicals', 'Active', 50, 12.99],
       [tenantIds[0], 'Aluminum Sheet', 'ALM-500', 'Metals', 'Active', 20, 45.00],
@@ -47,7 +43,6 @@ async function seed() {
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
         [pId, tenant_id, name, sku, category, status, reorder_threshold, cost_per_unit]
       );
-      // Create inventory record for each product
       await pool.query(
         `INSERT INTO inventory (id, product_id, quantity) VALUES ($1, $2, $3)`,
         [randomUUID(), pId, Math.floor(Math.random() * 200) + 10]
@@ -67,8 +62,6 @@ async function run() {
     await seed();
   } catch (e) {
     console.error('❌ Error:', e.message);
-  } finally {
-    await pool.end();
   }
 }
 

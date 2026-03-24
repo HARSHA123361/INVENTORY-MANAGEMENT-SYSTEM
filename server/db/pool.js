@@ -1,38 +1,46 @@
-const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
-const { promisify } = require('util');
+const { createClient } = require('@libsql/client');
 
-const dbPath = path.join(__dirname, 'inventory.db');
-const db = new sqlite3.Database(dbPath);
+const client = createClient({
+  url: process.env.TURSO_DATABASE_URL,
+  authToken: process.env.TURSO_AUTH_TOKEN,
+});
 
-// Mimic the 'pg' query interface
-const query = (text, params = []) => {
-  return new Promise((resolve, reject) => {
-    // Check if it's a SELECT/RETURNING or mutation
-    const isSelect = text.trim().toUpperCase().startsWith('SELECT');
-    const isReturning = text.toUpperCase().includes('RETURNING');
+// Convert $1,$2 placeholders to ?
+const toLibsql = (text, params = []) => ({
+  sql: text.replace(/\$(\d+)/g, '?'),
+  args: params.map((v) => (v === undefined ? null : v)),
+});
 
-    if (isSelect || isReturning) {
-      db.all(text, params, (err, rows) => {
-        if (err) reject(err);
-        else resolve({ rows });
-      });
-    } else {
-      db.run(text, params, function(err) {
-        if (err) reject(err);
-        else resolve({ rows: [], lastID: this.lastID, changes: this.changes });
-      });
-    }
+// Map libsql result to plain row objects
+const mapRows = (result) =>
+  result.rows.map((row) => {
+    const obj = {};
+    result.columns.forEach((col, i) => { obj[col] = row[i]; });
+    return obj;
   });
-};
 
-// SQLite doesn't have a built-in pool connect for transactions in a simple way,
-// but for this demo, we'll provide a mock to keep service layer happy.
-const connect = async () => {
+// Single query — pg-compatible interface
+const query = async (text, params = []) => {
+  const result = await client.execute(toLibsql(text, params));
   return {
-    query,
-    release: () => {},
+    rows: mapRows(result),
+    lastID: result.lastInsertRowid,
+    changes: result.rowsAffected,
   };
 };
 
-module.exports = { query, connect, end: () => new Promise(res => db.close(res)) };
+// Batch multiple statements atomically (replaces BEGIN/COMMIT pattern)
+const batch = async (statements) => {
+  // statements = [{ sql, params }, ...]
+  const libsqlStmts = statements.map(({ sql, params = [] }) => toLibsql(sql, params));
+  const results = await client.batch(libsqlStmts, 'write');
+  return results.map((r) => ({ rows: mapRows(r) }));
+};
+
+// Kept for backward compat — not used for real transactions anymore
+const connect = async () => ({
+  query,
+  release: () => {},
+});
+
+module.exports = { query, batch, connect, end: async () => {} };
