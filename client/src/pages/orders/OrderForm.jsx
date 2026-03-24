@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { useGetActiveProductsQuery } from '../../api/productApi';
 import { useGetInventoryQuery } from '../../api/inventoryApi';
-import { useCreateOrderMutation } from '../../api/orderApi';
+import { useCreateOrderMutation, useGetOrdersQuery } from '../../api/orderApi';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ChevronLeft,
@@ -45,15 +45,26 @@ export default function OrderForm() {
 
   const { data: inventoryData } = useGetInventoryQuery(
     { tenant_id: selectedTenantId, limit: 500 },
-    { skip: !selectedTenantId }
+    { skip: !selectedTenantId, refetchOnMountOrArgChange: true }
+  );
+
+  const { data: ordersData } = useGetOrdersQuery(
+    { tenant_id: selectedTenantId, limit: 500 },
+    { skip: !selectedTenantId, refetchOnMountOrArgChange: true }
   );
 
   const [createOrder, { isLoading: isCreating }] = useCreateOrderMutation();
 
   const inventory = inventoryData?.data?.rows || [];
-  
+  const allOrders = ordersData?.data?.rows || [];
+
   const selectedProduct = products.find(p => String(p.id) === String(formData.product_id));
-  const currentStock = inventory.find(i => String(i.product_id) === String(formData.product_id))?.quantity || 0;
+
+  const rawStock = inventory.find(i => String(i.product_id) === String(formData.product_id))?.quantity || 0;
+  const committed = allOrders
+    .filter(o => String(o.product_id) === String(formData.product_id) && o.status === 'Created')
+    .reduce((sum, o) => sum + o.quantity, 0);
+  const currentStock = Math.max(0, rawStock - committed);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
