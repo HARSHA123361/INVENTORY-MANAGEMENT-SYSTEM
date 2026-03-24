@@ -30,7 +30,7 @@ export default function OrderDetail() {
   const [updateOrder, { isLoading: updating }] = useUpdateOrderMutation();
 
   const order = orderData?.data;
-  const available = order?.inventory_quantity ?? 0;
+  const available = order?.effective_available ?? order?.inventory_quantity ?? 0;
 
   const handleConfirm = async () => {
     try {

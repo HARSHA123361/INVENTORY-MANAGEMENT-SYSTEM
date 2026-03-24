@@ -52,15 +52,18 @@ const updateOrder = async (id, tenantId, { status }) => {
 
   if (status === 'Confirmed') {
     const inv = await inventoryRepo.findByProductId(existing.product_id);
-    const available = inv ? inv.quantity : 0;
     if (!inv) throw Object.assign(new Error('No inventory record for this product'), { status: 400 });
-    if (available < existing.quantity) {
+    // Subtract other Created orders (excluding this one which is still 'Created')
+    const committed = await orderRepo.committedQtyForProduct(existing.product_id);
+    const ownCommitted = existing.status === 'Created' ? existing.quantity : 0;
+    const effectiveAvailable = inv.quantity - (committed - ownCommitted);
+    if (effectiveAvailable < existing.quantity) {
       throw Object.assign(
         new Error('Insufficient inventory to confirm this order. Restock or reduce quantity.'),
         { status: 400 }
       );
     }
-    await inventoryRepo.update(inv.id, available - existing.quantity);
+    await inventoryRepo.update(inv.id, inv.quantity - existing.quantity);
   }
 
   return orderRepo.update(id, { status });

@@ -32,7 +32,13 @@ const findAll = async ({ tenantId, search = '', page = 1, limit = 10 }) => {
 const findById = async (id, tenantId = null) => {
   let sql = `SELECT o.id, o.tenant_id, o.product_id, o.quantity, o.status, o.created_at,
             p.name AS product_name, p.sku, p.cost_per_unit, p.status AS product_status,
-            i.quantity AS inventory_quantity
+            i.quantity AS inventory_quantity,
+            i.quantity - COALESCE((
+              SELECT SUM(o2.quantity) FROM orders o2
+              WHERE o2.product_id = o.product_id
+                AND o2.status = 'Created'
+                AND o2.id != o.id
+            ), 0) AS effective_available
      FROM orders o
      JOIN products p ON p.id = o.product_id
      LEFT JOIN inventory i ON i.product_id = o.product_id

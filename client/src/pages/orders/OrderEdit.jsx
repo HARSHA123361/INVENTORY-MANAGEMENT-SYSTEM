@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import { useGetOrderQuery, useUpdateOrderMutation } from '../../api/orderApi';
+import { useGetOrderQuery, useUpdateOrderMutation, useGetOrdersQuery } from '../../api/orderApi';
 import { useGetInventoryQuery } from '../../api/inventoryApi';
 import { useGetActiveProductsQuery } from '../../api/productApi';
 import { motion } from 'framer-motion';
@@ -33,9 +33,15 @@ export default function OrderEdit() {
 
   const { data: invRes } = useGetInventoryQuery(
     { tenant_id: selectedTenantId, limit: 500 },
-    { skip: !selectedTenantId }
+    { skip: !selectedTenantId, refetchOnMountOrArgChange: true }
   );
   const inventoryRows = invRes?.data?.rows || [];
+
+  const { data: ordersRes } = useGetOrdersQuery(
+    { tenant_id: selectedTenantId, limit: 500 },
+    { skip: !selectedTenantId, refetchOnMountOrArgChange: true }
+  );
+  const allOrders = ordersRes?.data?.rows || [];
 
   const [updateOrder, { isLoading: saving }] = useUpdateOrderMutation();
 
@@ -49,8 +55,11 @@ export default function OrderEdit() {
   }, [order]);
 
   const selectedProduct = products.find((p) => String(p.id) === String(formData.product_id));
-  const currentStock =
-    inventoryRows.find((i) => String(i.product_id) === String(formData.product_id))?.quantity ?? 0;
+  const rawStock = inventoryRows.find((i) => String(i.product_id) === String(formData.product_id))?.quantity ?? 0;
+  const committed = allOrders
+    .filter(o => String(o.product_id) === String(formData.product_id) && o.status === 'Created' && o.id !== id)
+    .reduce((sum, o) => sum + o.quantity, 0);
+  const currentStock = Math.max(0, rawStock - committed);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
