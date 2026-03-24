@@ -262,10 +262,68 @@ Used **Tailwind CSS** for all styling with a consistent violet/indigo design sys
 
 The design prioritizes clarity — status badges are color-coded (green = Active/Created, amber = Pending, red = Cancelled/Inactive), low-stock items are highlighted in the inventory list, and the header shows a live notification bell for items at or below their reorder threshold.
 
-### 8. Assumptions Made
+### 8. Assumptions, Gaps & Design Decisions
 
-- SQLite was chosen over PostgreSQL for zero-setup local development. The pool wrapper makes swapping to Postgres a one-file change.
-- No authentication layer was implemented — the assignment scope focused on multi-tenancy via tenant selection, not user login.
-- Inventory records are auto-created (quantity = 0) when a product is created, ensuring every product always has a corresponding inventory row.
-- Deleting a product cascades to its inventory and any associated orders (via `ON DELETE CASCADE` in the schema).
-- The `Pending` status means "order saved but stock was insufficient at creation time" — it does not block the order from being confirmed later if stock is replenished.
+The requirements left several areas open to interpretation. Below are every assumption made and every gap addressed, along with the reasoning — ready to discuss at the interview.
+
+---
+
+#### Database & Backend
+
+**SQLite instead of PostgreSQL**
+The requirements listed PostgreSQL as preferred but said "any RDBMS" is acceptable. SQLite was chosen for zero-setup local development — no database server to install or configure. The pool layer (`db/pool.js`) wraps SQLite with a `pg`-compatible interface (`pool.query(sql, params)`), so migrating to PostgreSQL requires changing only that one file.
+
+**Inventory auto-created on product creation**
+The requirements did not specify when an inventory record should be created. We assumed it should be created automatically (with `quantity = 0`) at the same time as the product, inside a transaction. This ensures every product always has a corresponding inventory row and avoids null-reference errors when checking stock.
+
+**Effective available stock = inventory − committed Created orders**
+The requirements say "if inventory >= requested quantity → Created". This is ambiguous when multiple orders exist for the same product. We interpreted "inventory" as the *effective available* quantity — raw stock minus the sum of all existing `Created` orders for that product. This prevents over-committing stock across multiple simultaneous orders. The same logic is applied on the frontend display so the user sees the real available number before submitting.
+
+**Confirming an order deducts inventory; creating does not**
+The requirements only say to check inventory at creation time and assign a status. We assumed the actual stock deduction happens at `Confirm`, not at `Create`. This mirrors real-world warehouse behaviour where a `Created` order is a reservation intent, and `Confirmed` is the physical commitment.
+
+**Pending orders can still be confirmed later**
+The requirements do not say what happens to `Pending` orders after stock is replenished. We assumed a `Pending` order can be confirmed at any time — the system re-checks inventory at confirm time. If stock has been restocked since the order was placed, confirmation succeeds.
+
+**Confirmed and Cancelled orders are terminal states**
+The requirements do not explicitly say these are final. We assumed `Confirmed` and `Cancelled` are terminal — no further edits or status changes are allowed. This prevents inventory from being double-deducted or incorrectly restored.
+
+**Deleting a product cascades to inventory and orders**
+The requirements do not specify cascade behaviour. We used `ON DELETE CASCADE` on both `inventory` and `orders` foreign keys to `products`. This means deleting a product removes its inventory record and all associated orders. This was chosen over soft-delete for simplicity at assignment scope.
+
+**SKU uniqueness is per-tenant, not global**
+The requirements say SKU is a required field but do not specify uniqueness scope. We enforced `UNIQUE(tenant_id, sku)` at the database level — the same SKU can exist across different tenants but not within the same tenant.
+
+---
+
+#### Frontend & UX
+
+**Tenant selection via dropdown, not authentication**
+The requirements specify a Tenant Dropdown on every list page but do not mention login or session management. We assumed tenant scoping is done via UI selection stored in Redux, not via authenticated sessions. The selected tenant persists across page navigation within the same browser session.
+
+**Inventory Edit navigates to the Detail page**
+The requirements specify an action menu with `View`, `Edit`, and `Delete` on the Inventory list. There is no separate Inventory Edit form — the Detail page contains the inline stock update form. Both `View` and `Edit` in the action menu navigate to the same Detail page, which serves both purposes. This was a deliberate UX decision to avoid a redundant page.
+
+**No separate Inventory Create page**
+The requirements do not mention creating inventory records manually. Since inventory is auto-created with each product, there is no "Add Inventory" flow. Users manage stock levels through the Inventory Detail update form.
+
+**Order Edit only allows revising product and quantity**
+The requirements mention an Edit option for orders but do not define what fields are editable. We assumed only `product` and `quantity` can be revised (for `Created` or `Pending` orders), and the status is automatically re-evaluated. `Confirmed` and `Cancelled` orders cannot be edited.
+
+**Tenant status toggle on Create form**
+The requirements only mention `Tenant Name *` as a required field for creating a tenant. We added an optional `Status` toggle (Active/Inactive) on the create form as well, defaulting to `Active`. This was added for completeness since the field exists in the schema.
+
+**No authentication or role-based access control**
+The requirements do not mention authentication. No login, JWT, or RBAC was implemented. All API endpoints are open. This is noted as a production gap but is out of scope for this assessment.
+
+**No import/export functionality**
+The requirements explicitly state "there is no Import/Export functionality" for Products. This was respected — no CSV upload or download buttons exist anywhere in the app.
+
+**No global top search bar**
+The requirements explicitly say "Remove the global top search bar from all pages." The header contains only the app logo, a low-stock notification bell, and the user avatar. Each list page has its own local search input.
+
+**Tenant List does not have a Tenant Dropdown**
+The requirements say every list page for Products, Inventory, and Orders must have a Tenant Dropdown. The Tenant List itself is the source of tenants and does not need one — this was intentional and matches the wireframe reference.
+
+**Performance metrics and projected out-of-stock on detail pages are placeholder UI**
+The Product Detail page shows a bar chart ("Performance Metrics") and the Inventory Detail shows "Projected Out-of-Stock: ~14 Days". These are static placeholder visuals. The requirements do not specify analytics data, so real data was not wired up. These are clearly marked as UI enhancements and would be replaced with real data in a production system.
