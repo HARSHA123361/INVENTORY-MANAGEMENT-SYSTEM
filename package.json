@@ -1,5 +1,9 @@
 {
-  "dependencies": {
-    "@libsql/client": "^0.17.2"
-  }
+  "name": "inventory-management-server",
+  "version": "1.0.0",
+  "scripts": {
+    "install": "npm install --prefix server",
+    "start": "node server/index.js"
+  },
+  "dependencies": {}
 }
