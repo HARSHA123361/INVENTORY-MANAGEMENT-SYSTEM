@@ -17,6 +17,7 @@ import {
   Box,
 } from 'lucide-react';
 import TenantDropdown from '../../components/shared/TenantDropdown';
+import { formatDate } from '../../utils/date';
 
 export default function ProductDetail() {
   const { id } = useParams();
@@ -183,7 +184,7 @@ export default function ProductDetail() {
             <div className="space-y-4">
               <div className="flex justify-between items-center py-2 border-b border-[#F1F5F9]">
                 <span className="text-[#64748B] text-sm font-medium">Created At</span>
-                <span className="text-[#1E293B] text-sm font-black">{new Date(product.created_at).toLocaleDateString()}</span>
+                <span className="text-[#1E293B] text-sm font-black">{formatDate(product.created_at)}</span>
               </div>
               <div className="flex justify-between items-center py-2 border-b border-[#F1F5F9]">
                 <span className="text-[#64748B] text-sm font-medium">Last Restock</span>

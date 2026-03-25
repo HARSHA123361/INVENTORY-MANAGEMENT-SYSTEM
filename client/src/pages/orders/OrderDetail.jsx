@@ -18,6 +18,7 @@ import {
   TrendingUp,
   History
 } from 'lucide-react';
+import { formatDate, formatDateTime, formatTime } from '../../utils/date';
 
 export default function OrderDetail() {
   const { id } = useParams();
@@ -171,7 +172,7 @@ export default function OrderDetail() {
             <div className="pt-8 border-t border-[#F1F5F9] flex items-center justify-between relative z-10">
               <div className="flex items-center gap-3">
                 <Calendar className="w-4 h-4 text-violet-600" />
-                <span className="text-xs text-[#64748B] font-semibold">Recorded on {new Date(order.created_at).toLocaleString()}</span>
+                <span className="text-xs text-[#64748B] font-semibold">Recorded on {formatDateTime(order.created_at)}</span>
               </div>
               <div className="flex items-center gap-2">
                 <ShieldCheck className="w-4 h-4 text-emerald-500" />
@@ -245,7 +246,7 @@ export default function OrderDetail() {
               <div className="relative pl-8">
                 <div className="absolute left-2.5 top-1 w-2 h-2 rounded-full bg-violet-600 shadow-sm" />
                 <p className="text-xs font-black text-[#1E293B]">Order Initialized</p>
-                <p className="text-[10px] text-[#64748B] mt-1 font-medium">{new Date(order.created_at).toLocaleTimeString()}</p>
+                <p className="text-[10px] text-[#64748B] mt-1 font-medium">{formatTime(order.created_at)}</p>
               </div>
               
               {order.status !== 'Created' && order.status !== 'Pending' && (

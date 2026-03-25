@@ -9,6 +9,7 @@ import ActionMenu from '../../components/shared/ActionMenu';
 import ConfirmDialog from '../../components/shared/ConfirmDialog';
 import { motion } from 'framer-motion';
 import { ShoppingCart, Search, Plus, Hash, Calendar, Filter } from 'lucide-react';
+import { formatDate } from '../../utils/date';
 
 export default function OrderList() {
   const navigate = useNavigate();
@@ -158,7 +159,7 @@ export default function OrderList() {
                     <td className="px-6 py-4 text-center text-[#64748B] text-xs font-medium">
                       <div className="flex items-center justify-center gap-2">
                         <Calendar className="w-3 h-3 text-violet-600 shrink-0" />
-                        {new Date(order.created_at).toLocaleDateString()}
+                        {formatDate(order.created_at)}
                       </div>
                     </td>
                     <td className="px-6 py-4 text-right">
