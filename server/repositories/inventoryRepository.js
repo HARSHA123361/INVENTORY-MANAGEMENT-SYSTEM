@@ -9,16 +9,16 @@ const findAll = async ({ tenantId, search = '', page = 1, limit = 10 }) => {
      FROM inventory i
      JOIN products p ON p.id = i.product_id
      WHERE p.tenant_id = $1
-       AND (p.name LIKE $2 OR p.sku LIKE $2)
+       AND (p.name LIKE $2 OR p.sku LIKE $3)
      ORDER BY p.name
-     LIMIT $3 OFFSET $4`,
-    [tenantId, like, limit, offset]
+     LIMIT $4 OFFSET $5`,
+    [tenantId, like, like, limit, offset]
   );
 
   const { rows: countRows } = await pool.query(
     `SELECT COUNT(*) as c FROM inventory i JOIN products p ON p.id = i.product_id
-     WHERE p.tenant_id = $1 AND (p.name LIKE $2 OR p.sku LIKE $2)`,
-    [tenantId, like]
+     WHERE p.tenant_id = $1 AND (p.name LIKE $2 OR p.sku LIKE $3)`,
+    [tenantId, like, like]
   );
 
   return { rows, total: parseInt(countRows[0].c) };

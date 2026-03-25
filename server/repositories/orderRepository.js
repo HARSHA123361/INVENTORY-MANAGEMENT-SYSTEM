@@ -12,18 +12,18 @@ const findAll = async ({ tenantId, search = '', page = 1, limit = 10 }) => {
      JOIN products p ON p.id = o.product_id
      LEFT JOIN inventory i ON i.product_id = o.product_id
      WHERE o.tenant_id = $1
-       AND (p.name LIKE $2 OR p.sku LIKE $2 OR CAST(o.id AS TEXT) LIKE $2)
+       AND (p.name LIKE $2 OR p.sku LIKE $3 OR CAST(o.id AS TEXT) LIKE $4)
      ORDER BY o.created_at DESC
-     LIMIT $3 OFFSET $4`,
-    [tenantId, like, limit, offset]
+     LIMIT $5 OFFSET $6`,
+    [tenantId, like, like, like, limit, offset]
   );
 
   const { rows: countRows } = await pool.query(
     `SELECT COUNT(*) as count FROM orders o
      JOIN products p ON p.id = o.product_id
      WHERE o.tenant_id = $1
-       AND (p.name LIKE $2 OR p.sku LIKE $2 OR CAST(o.id AS TEXT) LIKE $2)`,
-    [tenantId, like]
+       AND (p.name LIKE $2 OR p.sku LIKE $3 OR CAST(o.id AS TEXT) LIKE $4)`,
+    [tenantId, like, like, like]
   );
 
   return { rows, total: parseInt(countRows[0].count) };

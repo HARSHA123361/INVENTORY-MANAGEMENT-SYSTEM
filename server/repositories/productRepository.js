@@ -5,21 +5,22 @@ const findAll = async ({ tenantId, search = '', sort = 'name', order = 'ASC', pa
   const offset = (page - 1) * limit;
   const allowedSorts = { name: 'p.name', sku: 'p.sku', category: 'p.category', status: 'p.status' };
   const sortCol = allowedSorts[sort] || 'p.name';
+  const like = `%${search}%`;
 
   const { rows } = await pool.query(
     `SELECT p.id, p.tenant_id, p.name, p.sku, p.category, p.status,
             p.reorder_threshold, p.cost_per_unit, p.created_at
      FROM products p
      WHERE p.tenant_id = $1
-       AND (p.name LIKE $2 OR p.sku LIKE $2)
+       AND (p.name LIKE $2 OR p.sku LIKE $3)
      ORDER BY ${sortCol} ${order === 'DESC' ? 'DESC' : 'ASC'}
-     LIMIT $3 OFFSET $4`,
-    [tenantId, `%${search}%`, limit, offset]
+     LIMIT $4 OFFSET $5`,
+    [tenantId, like, like, limit, offset]
   );
 
   const { rows: countRows } = await pool.query(
-    `SELECT COUNT(*) as count FROM products WHERE tenant_id = $1 AND (name LIKE $2 OR sku LIKE $2)`,
-    [tenantId, `%${search}%`]
+    `SELECT COUNT(*) as count FROM products WHERE tenant_id = $1 AND (name LIKE $2 OR sku LIKE $3)`,
+    [tenantId, like, like]
   );
 
   return { rows, total: parseInt(countRows[0].count) };
