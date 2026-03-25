@@ -18,6 +18,7 @@ export default function ProductList() {
   const [sort, setSort] = useState('name');
   const [page, setPage] = useState(1);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleteError, setDeleteError] = useState('');
 
   const { data, isLoading, isFetching } = useGetProductsQuery(
     { tenant_id: selectedTenantId, search, sort, page, limit: 10 },
@@ -35,8 +36,14 @@ export default function ProductList() {
   }, [selectedTenantId]);
 
   const handleDelete = async () => {
-    await deleteProduct({ id: deleteTarget.id, tenant_id: selectedTenantId });
-    setDeleteTarget(null);
+    try {
+      await deleteProduct({ id: deleteTarget.id, tenant_id: selectedTenantId }).unwrap();
+      setDeleteTarget(null);
+      setDeleteError('');
+    } catch (err) {
+      setDeleteError(err?.data?.error || 'Failed to delete product');
+      setDeleteTarget(null);
+    }
   };
 
   if (!selectedTenantId) {
@@ -73,6 +80,13 @@ export default function ProductList() {
           </button>
         </div>
       </div>
+
+      {deleteError && (
+        <div className="bg-rose-50 border border-rose-200 text-rose-700 px-5 py-4 rounded-2xl text-sm font-medium flex items-center justify-between">
+          <span>{deleteError}</span>
+          <button onClick={() => setDeleteError('')} className="text-rose-400 hover:text-rose-600 font-bold ml-4">✕</button>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {[

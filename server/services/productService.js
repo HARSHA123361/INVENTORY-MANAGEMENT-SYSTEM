@@ -32,8 +32,18 @@ const updateProduct = async (id, tenantId, body) => {
 
 const deleteProduct = async (id, tenantId) => {
   await getProduct(id, tenantId);
-  const deleted = await repo.remove(id);
-  if (!deleted) throw Object.assign(new Error('Product not found'), { status: 404 });
+  try {
+    const deleted = await repo.remove(id);
+    if (!deleted) throw Object.assign(new Error('Product not found'), { status: 404 });
+  } catch (e) {
+    if (e.message && e.message.includes('FOREIGN KEY')) {
+      throw Object.assign(
+        new Error('Cannot delete this product — it has existing orders. Delete or cancel the orders first.'),
+        { status: 409 }
+      );
+    }
+    throw e;
+  }
 };
 
 const getProductStats = (tenantId) => repo.stats(tenantId);
