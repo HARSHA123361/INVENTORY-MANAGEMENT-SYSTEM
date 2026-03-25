@@ -147,7 +147,7 @@ export default function ProductDetail() {
                 <History className="w-5 h-5 text-violet-600" />
                 Performance Metrics
               </h3>
-              <span className="text-xs text-[#64748B] font-medium">Last 30 days</span>
+              <span className="text-xs text-[#64748B] font-medium">Last 24 hours</span>
             </div>
             <div className="h-48 flex items-end gap-2 px-4 bg-slate-50 rounded-2xl border border-[#E2E8F0] p-4">
               {[40, 70, 45, 90, 65, 80, 55].map((h, i) => (
@@ -160,10 +160,13 @@ export default function ProductDetail() {
               ))}
             </div>
             <div className="flex justify-between mt-4 px-4 text-[10px] font-black text-[#64748B] uppercase tracking-widest">
-              <span>week 1</span>
-              <span>week 2</span>
-              <span>week 3</span>
-              <span>week 4</span>
+              <span>6am</span>
+              <span>10am</span>
+              <span>2pm</span>
+              <span>6pm</span>
+              <span>10pm</span>
+              <span>2am</span>
+              <span>6am</span>
             </div>
           </div>
         </motion.div>
