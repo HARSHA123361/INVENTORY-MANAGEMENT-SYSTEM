@@ -332,9 +332,7 @@ The Product Detail page shows a bar chart ("Performance Metrics") and the Invent
 
 ## Live Demo
 
-Frontend (Vercel): [https://inventory-management-system-alpha-ten.vercel.app](https://inventory-management-system-alpha-ten.vercel.app)
-
-Backend API (Railway): [https://inventory-management-system-production-06e2.up.railway.app/api/health](https://inventory-management-system-production-06e2.up.railway.app/api/health)
+[https://inventory-management-system-alpha-ten.vercel.app](https://inventory-management-system-alpha-ten.vercel.app)
 
 ---
 
