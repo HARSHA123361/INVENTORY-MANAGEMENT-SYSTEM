@@ -327,3 +327,55 @@ The requirements say every list page for Products, Inventory, and Orders must ha
 
 **Performance metrics and projected out-of-stock on detail pages are placeholder UI**
 The Product Detail page shows a bar chart ("Performance Metrics") and the Inventory Detail shows "Projected Out-of-Stock: ~14 Days". These are static placeholder visuals. The requirements do not specify analytics data, so real data was not wired up. These are clearly marked as UI enhancements and would be replaced with real data in a production system.
+
+---
+
+## Live Demo
+
+Frontend (Vercel): [https://inventory-management-system-alpha-ten.vercel.app](https://inventory-management-system-alpha-ten.vercel.app)
+
+Backend API (Railway): [https://inventory-management-system-production-06e2.up.railway.app/api/health](https://inventory-management-system-production-06e2.up.railway.app/api/health)
+
+---
+
+## Deployment Architecture
+
+The application is deployed using a split hosting approach — frontend and backend on separate platforms, with a cloud-hosted database.
+
+```
+Browser
+  │
+  ▼
+Vercel (React frontend)
+  │  HTTPS API calls
+  ▼
+Railway (Node.js / Express backend)
+  │  libsql protocol
+  ▼
+Turso (Hosted SQLite database)
+```
+
+### Frontend — Vercel
+
+The React client is deployed on Vercel, connected directly to the GitHub repository. Every push to `main` triggers an automatic redeploy. Vercel handles CDN distribution, HTTPS, and SPA routing (via `vercel.json` rewrites so page refreshes work correctly on all routes).
+
+The API base URL is injected at build time via the `VITE_API_URL` environment variable, so the frontend always points to the correct Railway backend.
+
+### Backend — Railway
+
+The Express server is deployed on Railway with the root directory set to `/server`. Railway detects the Node.js app via `nixpacks`, installs dependencies, and runs `node index.js`. Environment variables (`TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, `PORT`) are configured in the Railway dashboard and injected at runtime.
+
+### Database — Turso (Hosted SQLite)
+
+Instead of running a local SQLite file (which would reset on every Railway deployment), the database is hosted on [Turso](https://turso.tech) — a free, globally distributed SQLite-compatible cloud database. The `@libsql/client` package connects to it over HTTPS using a database URL and auth token.
+
+The existing SQLite query interface was preserved — only `db/pool.js` was updated to use the libsql client instead of the local `sqlite3` file. All SQL queries, repositories, services, and controllers remained unchanged.
+
+### Benefits of This Approach
+
+- Data persists across deployments and server restarts — no more reset on refresh
+- Zero cost — Vercel free tier, Railway free tier, Turso free tier
+- Automatic deploys on every GitHub push — no manual deployment steps
+- Frontend and backend scale independently
+- SQLite-compatible queries — no migration to a different SQL dialect needed
+- Turso's libsql protocol works over HTTPS, so no VPC or private networking required
